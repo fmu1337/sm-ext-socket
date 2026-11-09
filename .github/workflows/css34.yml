@@ -26,6 +26,7 @@ jobs:
           docker run --rm -v "$PWD:/src" -w /src "$IMAGE" linux32 bash -c '
             set -euo pipefail
             set +u; source /opt/rh/devtoolset-10/enable; set -u
+            export PATH="$(ls -d /opt/python/cp3*/bin | sort -V | tail -1):$PATH"
             git config --global --add safe.directory "*"
             git config --global user.name ci; git config --global user.email ci@localhost
             bash ci/build.sh /src /src/dist
