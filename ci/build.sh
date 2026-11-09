@@ -48,7 +48,11 @@ api="$(sed -nE 's/^[[:space:]]*#define[[:space:]]+SMINTERFACE_EXTENSIONAPI_VERSI
 echo "==> boost ${BOOST_VERSION} headers" >&2
 BOOST="$DEPS/boost_${BOOST_VERSION//./_}"
 if [[ ! -d "$BOOST/boost" ]]; then
-  curl -fsSL --retry 3 -o "$BOOST.tar.bz2" "$BOOST_URL"
+  for i in 1 2 3 4 5 6; do
+    curl -fsSL --retry 3 -o "$BOOST.tar.bz2" "$BOOST_URL" && break
+    [[ $i == 6 ]] && die "download failed: $BOOST_URL"
+    echo "retry $i: $BOOST_URL" >&2; sleep 30
+  done
   [[ "$(sha256sum "$BOOST.tar.bz2" | awk '{print $1}')" == "$BOOST_SHA256" ]] || die "boost sha256 mismatch"
   tar -xjf "$BOOST.tar.bz2" -C "$DEPS" "boost_${BOOST_VERSION//./_}/boost"
   rm -f "$BOOST.tar.bz2"
