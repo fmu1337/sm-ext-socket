@@ -1,0 +1,47 @@
+name: css34
+
+# CS:S v34 build for SourceMod 1.13 (sourcemod-css34), see ci/build.sh.
+# A v*-css34 tag publishes the archives as a GitHub release.
+on:
+  push:
+    branches: [master]
+    tags: ['v*-css34']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    env:
+      # Same image as fmu1337/sourcemod-css34 builder/docker/build.sh
+      IMAGE: quay.io/pypa/manylinux2014_i686@sha256:30305867f278896ee117b0d162a8e4f9b7b16819e6590f6139e14c5ed5b23fdd
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build in manylinux2014_i686 (GCC 10.2.1, glibc 2.17)
+        run: |
+          docker run --rm -v "$PWD:/src" -w /src "$IMAGE" linux32 bash -c '
+            set -euo pipefail
+            set +u; source /opt/rh/devtoolset-10/enable; set -u
+            git config --global --add safe.directory "*"
+            git config --global user.name ci; git config --global user.email ci@localhost
+            bash ci/build.sh /src /src/dist
+            chown -R '"$(id -u):$(id -g)"' /src/dist'
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: socket-css34
+          path: dist/
+          if-no-files-found: error
+
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/*.tar.gz dist/SHA256SUMS \
+            --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" \
+            --notes "socket.ext.so for CS:S v34 on SourceMod 1.13 (fmu1337/sourcemod-css34). See ci/build.sh."
